@@ -43,7 +43,7 @@ print 'Message send successfully'
 
 
 # Now receive data
-reply = s.recv(4096)
+reply = s.recvfrom(4096)
 
 print reply
 

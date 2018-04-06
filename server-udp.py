@@ -28,5 +28,6 @@ while True:
     reply = 'OK...' + data
     if not data or data.rstrip() == "ciao":
         break
+    sock.sendto(data, (addr[0], addr[1]))
 
 sock.close()
