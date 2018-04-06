@@ -1,41 +1,50 @@
 import thread
 import socket
-import SocketServer
 import sys
 
-#DA CORREGGERE
 
-def clientthread():
+
+HOST = '127.0.0.1'   # Symbolic name meaning all available interfaces
+PORT = 8888 # Arbitrary non-privileged port
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+print "Socket created..."
+
+try:
+    #dice al s.o. di aprire la connessione
+    s.bind((HOST, PORT))
+except socket.error, msg:
+    print 'Bind failed. Error code : ' + str(msg[0]) + ' Message ' + msg[1]
+    sys.exit()
+print 'Socket bind complete...'
+
+#Start listening on socket
+s.listen(10)
+print 'Socket now listening...'
+
+def clientthread(conn):
+
+    conn.send("Welcome to the server \n")
+
     while True:
         data = conn.recv(1024)
         reply = 'OK...' + data
-
-
+        print data
         if not data or data == "ciao\r\n":
             break
 
+        conn.sendall(reply)
+    #came out of loop
+    conn.close()
+
+
 while 1:
-    HOST = ''   # Symbolic name meaning all available interfaces
-    PORT = 8888 # Arbitrary non-privileged port
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print 'Socket created'
+    #wait to accept a connection - blocking call
+    conn, addr = s.accept()
 
-    #Bind socket to local host and port
-    try:
-        s.bind((HOST, PORT))
-         #wait to accept a connection - blocking call
-        conn, addr = s.accept()
 
-        thread.start_new_thread(clientthread, (conn))
+    thread.start_new_thread(clientthread, conn)
 
-    except socket.error , msg:
-        print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
-        sys.exit()
-
-    print 'Socket bind complete'
-
-    #Start listening on socket
-    s.listen(10)
-    print 'Socket now listening'
-
+s.close()
