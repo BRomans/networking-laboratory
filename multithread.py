@@ -12,7 +12,7 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 try:
     #dice al s.o. di aprire la connessione
-    s.bind(HOST, PORT)
+    s.bind((HOST, PORT))
 except socket.error, msg:
     print 'Bind failed. Error code : ' + str(msg[0]) + ' Message ' + msg[1]
     sys.exit()
