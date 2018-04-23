@@ -163,31 +163,34 @@ def startUpdServer():
     while True:
         #directly accept udp requests
         data, addr = udp_socket.recvfrom(1024)
-        if(data == '!start' and inchat is False):
-            reply = 'OK'
+        print('Request : ' + data)
+        if(data == '!start' and inchat == False):
+            reply = 'ok'
             inchat = True
             udp_socket.sendto(reply, (addr[0], addr[1]))
+        elif(data == 'ok'):
+            print('Chat request accepted...\n')
+
         elif(data == '!close'):
-            reply = 'CLOSE'
             inchat = False
-        else:
-            print('Received: ' + data)
+
+        reply = raw_input('--: ')
+        udp_socket.sendto(reply, (addr[0], addr[1]))
+
+
+
 
 
 def chatWithUser(user, userAddress, userPort):
 
     try:
         # directly send to udp server
-        userMessage = ''
-        udp_socket.sendto('!start', (userAddress, userPort))
-        data, addr = udp_socket.recvfrom(1024)
-        if data == 'OK':
-            print(user + ' accepted your chat request...\n')
-            while(userMessage != '!close'):
-                userMessage = raw_input('Answer: ')
-                udp_socket.sendto(userMessage, (addr[0], addr[1]))
-        else:
-            print(user + ' refused your chat request...\n')
+        userMessage = '!start'
+        while(userMessage != '!close'):
+            userMessage = raw_input('--: ')
+            udp_socket.sendto(userMessage, (userAddress, userPort))
+
+
     except socket.error:
         #Send failed
         print 'Chat error... reloading application'
@@ -240,10 +243,13 @@ while 1:
         retrieveUserInfo(name)
 
     elif user_input == '!chat':
-        name = raw_input('Choose an username to start a new chat: ')
-        address = raw_input('Ip Address: ')
-        port = int(raw_input('Port: '))
-        chatWithUser(name, address, port)
+        try:
+            name = raw_input('Choose an username to start a new chat: ')
+            address = raw_input('Ip Address: ')
+            port = int(raw_input('Port: '))
+            chatWithUser(name, address, port)
+        except:
+            print ('Error in starting chat...\n')
 
     elif user_input == '!help':
         printHelpManual()
