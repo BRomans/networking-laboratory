@@ -1,4 +1,4 @@
-#handling errors in python socket programs
+
 
 import socket   #for sockets
 import sys  #for exit
@@ -24,12 +24,12 @@ print 'Ip address of ' + host + ' is ' + remote_ip
 #Connect to remote server
 port = 8888
 
-def registerToServer(username, userIpAddress, userPort):
+def registerToServer(command, username, userIpAddress, userPort):
     try:
         #create an AF_INET, STREAM socket (TCP)
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     except socket.error, msg:
-        print 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1]
+        print ('Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1])
         sys.exit()
     clientSocket.connect((remote_ip , port))
     #Send some data to remote server
@@ -37,7 +37,7 @@ def registerToServer(username, userIpAddress, userPort):
     print ('Socket Connected to ' + host + ' on ip ' + remote_ip)
     try :
         #Set the whole string
-        clientSocket.send(username + '|' + userIpAddress+':' + str(userPort))
+        clientSocket.send(command + '>' + username + '|' + userIpAddress+':' + str(userPort))
         #s.sendall(connection_message)
         print 'Connession successful'
         #Now receive data
@@ -47,7 +47,7 @@ def registerToServer(username, userIpAddress, userPort):
 
     except socket.error, msg:
         #Send failed
-        print 'Send failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+        print ('Send failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1])
 
 
 def retrieveUserIp(name):
@@ -82,13 +82,14 @@ def printHelpManual():
            '-- !disconnect : close the current chat\n'
            '-- !quit : close the client application\n')
 
-print (username+',\n')
-print ('\nwelcome to Smart Chat!\n')
+
+print (username+', welcome to Smart Chat!\n')
 print ('\nConnecting to server...\n')
-registerToServer(username, userIpdAddress, userPort)
+command = 'register'
+registerToServer(command, username, userIpdAddress, userPort)
 
 while 1:
-    print ('Choose a command from the list:\n'
+    print ('Please, choose a command from the list:\n'
            '-- !connect <username>\n'
            '-- !disconnect\n'
            '-- !help\n'

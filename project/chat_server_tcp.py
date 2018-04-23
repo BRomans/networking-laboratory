@@ -7,6 +7,16 @@ def clientThread(conn):
     #conn.send("Connecting to the server... \n")
 
     data = conn.recv(1024)
+    dataParseCommand = data.split('>')
+    print('Received <' + dataParseCommand[0] +'> command...\n')
+    if(dataParseCommand[0] == 'register'):
+        print('Register procedure started...\n')
+        reply = loginUser(dataParseCommand[1])
+        conn.sendall(reply)
+
+    conn.close()
+
+def loginUser(data):
     dataParseName = data.split('|')
     username = dataParseName[0]
     dataParseAddress = dataParseName[1].split(':')
@@ -16,30 +26,29 @@ def clientThread(conn):
            ' -- Username: ' + username + ' --\n'
            ' -- Ip Address: ' + userIpAddr + ' --\n'
            ' -- Ip Port: ' + userPort + ' --\n')
-    addNewUser(username, userIpAddr, userPort)
-
-
-    reply = username + ', you correctly joined our chat!\n'
-
-    conn.sendall(reply)
-    conn.close()
-
+    if not (checkExistingUserName(username)):
+        addNewUser(username, userIpAddr, userPort)
+    return username + ', you correctly joined our chat!\n'
 
 def addNewUser(name, address, port):
-    return
+    activeUsers[name] = [address, port]
+    print ('User registered, updating dictionary...', activeUsers)
 
-def checkExistingUserName(name, address):
-    return
+def checkExistingUserName(name):
+    print ('Checking if user <' + name + '> is already registered...')
+    return activeUsers.get(name) is not None and len(activeUsers.get(name)) > 0
 
-def removeUser(name, address):
-    return
-
+def removeUser(name):
+    print ('Removing user <' + name +'>...')
+    activeUsers.pop(name)
+    print ('User removed, updating dictionary...', activeUsers)
 
 
 HOST = ''   # Symbolic name meaning all available interfaces
 PORT = 8888 # Arbitrary non-privileged port
 
-activeUsers = {}
+activeUsers = dict([('DummyUser', ['0.0.0.0', '8080'])])
+print ('Init dictionary : ', activeUsers)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print 'Socket created'
