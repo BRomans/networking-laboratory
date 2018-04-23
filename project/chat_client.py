@@ -2,6 +2,7 @@
 
 import socket   #for sockets
 import sys  #for exit
+import thread
 
 
 userIpdAddress = str(sys.argv[1])
@@ -47,6 +48,8 @@ def registerToServer(command, username, userIpAddress, userPort):
         reply = clientSocket.recv(4096)
         print ('Server replied: ' + reply)
         clientSocket.close()
+        if(reply.split('|')[0] == 'ERROR '):
+            sys.exit(1)
 
     except socket.error, msg:
         #Send failed
@@ -153,11 +156,40 @@ def printHelpManual():
            '-- !get <username> : retrieve infos about the specified user\n'
            '-- !quit : close the client application\n')
 
+def startUpdServer():
+    print ('Listening for users to connect...')
+    udp_socket.bind((userIpdAddress, userPort))
+    while True:
+        #con udp non serve accettare richieste di connessione, si ricevono direttamente i dati
+        data, addr = udp_socket.recvfrom(1024)
+
+        print ("received message:", data)
+        reply = 'OK...' + data
+        if not data or data.rstrip() == "ciao":
+            break
+    udp_socket.sendto(data, (addr[0], addr[1]))
+
+
+def chatWithUser(user, userAddress, userPort):
+    clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    clientSocket.bind((userAddress, userPort))
+    try:
+        # con udp non c'e' bisogno di connettersi al server, non esiste handshake
+        data, addr = clientSocket.recvfrom(1024)
+        reply = raw_input('Insert text: ')
+        clientSocket.sendto(reply, (addr[0], addr[1]))
+    except socket.error:
+        #Send failed
+        print 'Send failed'
+    sys.exit()
+
 
 print (username+', welcome to Smart Chat!\n')
 print ('\nConnecting to server...\n')
 command = 'register'
 registerToServer(command, username, userIpdAddress, userPort)
+udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+thread.start_new_thread(startUpdServer, ())
 
 while 1:
     print ('Please, choose a command from the list:\n'
@@ -166,7 +198,7 @@ while 1:
            '-- !disconnect\n'
            '-- !users\n'
            '-- !get <username>\n'
-           '-- !chat <username> <address> <port>\n'
+           '-- !chat\n'
            '-- !help\n'
            '-- !quit\n')
     user_input = raw_input('...waiting for a command: \n')
@@ -196,6 +228,12 @@ while 1:
     elif user_input == '!get':
         name = raw_input('Choose an username: ')
         retrieveUserInfo(name)
+
+    elif user_input == '!chat':
+        name = raw_input('Choose an username to start a new chat: ')
+        address = raw_input('Ip Address: ')
+        port = int(raw_input('Port: '))
+        thread.start_new_thread(chatWithUser, (name, address, port))
 
     elif user_input == '!help':
         printHelpManual()

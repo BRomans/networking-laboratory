@@ -33,13 +33,15 @@ def loginUser(data):
     dataParseAddress = dataParseName[1].split(':')
     userIpAddr = dataParseAddress[0]
     userPort = dataParseAddress[1]
-    print (' -- User successfully registered --\n'
+    if not (checkExistingUserName(username)):
+        addNewUser(username, userIpAddr, userPort)
+        print (' -- User successfully registered --\n'
            ' -- Username: ' + username + ' --\n'
            ' -- Ip Address: ' + userIpAddr + ' --\n'
            ' -- Ip Port: ' + userPort + ' --\n')
-    if not (checkExistingUserName(username)):
-        addNewUser(username, userIpAddr, userPort)
-    return username + ', you correctly joined our chat!\n'
+        return username + ', you correctly joined our chat!\n'
+    else:
+        return 'ERROR | User <' + username + '> already exists, please choose a different nickname'
 
 def addNewUser(name, address, port):
     activeUsers[name] = [address, port]
