@@ -8,12 +8,23 @@ def clientThread(conn):
 
     data = conn.recv(1024)
     dataParseCommand = data.split('>')
-    print('Received <' + dataParseCommand[0] +'> command...\n')
-    if(dataParseCommand[0] == 'register'):
+    command = dataParseCommand[0]
+    print('Received <' + command +'> command...\n')
+
+    if(command == 'register'):
         print('Register procedure started...\n')
         reply = loginUser(dataParseCommand[1])
         conn.sendall(reply)
-
+    if(command == 'quit'):
+        print('Quit procedure started...\n')
+        reply = removeUser(dataParseCommand[1].split('|')[0])
+        conn.sendall(reply)
+    if(command == 'getUser'):
+        reply = getExistingUser(dataParseCommand[1].split('|')[0])
+        conn.sendall(reply)
+    if(command == 'userList'):
+        reply = userList()
+        conn.sendall(reply)
     conn.close()
 
 def loginUser(data):
@@ -34,14 +45,32 @@ def addNewUser(name, address, port):
     activeUsers[name] = [address, port]
     print ('User registered, updating dictionary...', activeUsers)
 
+def getExistingUser(name):
+    if(checkExistingUserName(name)):
+        print ('Retrieving user <' + name + '>...')
+        address = activeUsers.get(name)[0]
+        port = activeUsers.get(name)[1]
+        return name + ' | ' + address + ' | ' + port
+    else:
+        return ('User <' + name + '> does not exist...')
+
 def checkExistingUserName(name):
     print ('Checking if user <' + name + '> is already registered...')
     return activeUsers.get(name) is not None and len(activeUsers.get(name)) > 0
+
+def userList():
+    print ('Retrieving registered users...')
+    userList = activeUsers.keys()
+    userListFlat = ''
+    for user in userList:
+        userListFlat += user + ' - '
+    return userListFlat
 
 def removeUser(name):
     print ('Removing user <' + name +'>...')
     activeUsers.pop(name)
     print ('User removed, updating dictionary...', activeUsers)
+    return ('See you soon, ' + name + '...')
 
 
 HOST = ''   # Symbolic name meaning all available interfaces
@@ -67,12 +96,12 @@ print 'Socket now listening'
 #now keep talking with the client
 while 1:
     #wait to accept a connection - blocking call
-    print 'Waiting for users to open a connection...'
+    print 'Waiting for users to open a connection...\n'
      #wait to accept a connection - blocking call
     conn, addr = s.accept()
     try:
         thread.start_new_thread(clientThread, (conn,))
-        print 'Receiving registration from: ' + addr[0] + ':' + str(addr[1])
+        print ('Receiving registration from: ' + addr[0] + ':' + str(addr[1])+'\n')
     except thread.error, msg:
         print 'Connection failed. Error Code : '  + str(msg[0]) + ' Message ' + msg[1]
 
