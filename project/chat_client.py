@@ -1,7 +1,7 @@
 
 
 import socket   #for sockets
-import sys  #for exit
+import sys, select  #for exit and input
 import thread
 
 
@@ -158,37 +158,46 @@ def printHelpManual():
 
 def startUpdServer():
     print ('Listening for users to connect...')
-    udp_socket.bind((userIpdAddress, userPort))
+    udp_socket.bind(('', userPort))
     inchat = False
+    userAddress = []
     while True:
-        #directly accept udp requests
-        data, addr = udp_socket.recvfrom(1024)
-        print('Request : ' + data)
-        if(data == '!start' and inchat == False):
-            reply = 'ok'
-            inchat = True
-            udp_socket.sendto(reply, (addr[0], addr[1]))
-        elif(data == 'ok'):
-            print('Chat request accepted...\n')
+        # #directly accept udp requests
+        # data, addr = udp_socket.recvfrom(1024)
+        # print('Request : ' + data)
+        # if(data == '!start' and inchat == False):
+        #     reply = 'ok'
+        #     inchat = True
+        #     udp_socket.sendto(reply, (addr[0], addr[1]))
+        # elif(data == 'ok'):
+        #     print('Chat request accepted...\n')
+        #
+        # elif(data == '!close'):
+        #     inchat = False
+        #
+        # reply = raw_input('--: ')
+        # udp_socket.sendto(reply, (addr[0], addr[1]))
+        try:
+            message, address = udp_socket.recvfrom(1024)
+            userAddress = address
+            if message:
+                print address, "> ", message
+        except:
+            pass
 
-        elif(data == '!close'):
-            inchat = False
-
-        reply = raw_input('--: ')
-        udp_socket.sendto(reply, (addr[0], addr[1]))
-
-
-
-
+        input = sys.stdin.readline()
+        if(input != '!close'):
+            udp_socket.sendto(input, userAddress)
 
 def chatWithUser(user, userAddress, userPort):
 
     try:
         # directly send to udp server
         userMessage = '!start'
-        while(userMessage != '!close'):
-            userMessage = raw_input('--: ')
-            udp_socket.sendto(userMessage, (userAddress, userPort))
+        udp_socket.sendto(userMessage, (userAddress, userPort))
+        # while(userMessage != '!close'):
+        #     userMessage = raw_input('--: ')
+        #     udp_socket.sendto(userMessage, (userAddress, userPort))
 
 
     except socket.error:
