@@ -70,7 +70,8 @@ def userList():
 
 def removeUser(name):
     print ('Removing user <' + name +'>...')
-    activeUsers.pop(name)
+    if activeUsers.get(name):
+        activeUsers.pop(name)
     print ('User removed, updating dictionary...', activeUsers)
     return ('See you soon, ' + name + '...')
 

@@ -11,6 +11,8 @@ username = str(sys.argv[3])
 connected = False
 inChat = False
 userList = []
+global targetAddress
+global targetPort
 
 # Resolve hostname
 host = '127.0.0.1'
@@ -30,12 +32,21 @@ port = 8888
 
 def switchInChat():
     global inChat
-    print ('Switch in chat from ' + str(inChat) + ' to ' + str(not inChat))
+    if inChat:
+        print('Swap to chat mode, pres <enter> to continue...')
+    else:
+        print('Swap to command mode, pres <enter> to continue...')
     inChat = not inChat
 
 def getInChat():
     global inChat
     return inChat
+
+def setTargetAddress(address, port):
+    global targetAddress
+    global targetPort
+    targetAddress = address
+    targetPort = port
 
 def registerToServer(command, username, userIpAddress, userPort):
 
@@ -127,7 +138,7 @@ def retrieveUserList():
         clientSocket.send(command + '>')
         #Now receive data
         reply = clientSocket.recv(4096)
-        print ('Server replied: ' + reply)
+        print ('Users List: ' + reply)
         clientSocket.close()
 
     except socket.error, msg:
@@ -148,24 +159,29 @@ def retrieveUserInfo(name):
         clientSocket.send(command + '>' + name + '|')
         #Now receive data
         reply = clientSocket.recv(4096)
-        print ('Server replied: ' + reply)
+        print (name + 'is online...\n')
         clientSocket.close()
-
+        return reply
     except socket.error, msg:
         #Send failed
-        print 'Send failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+        print 'Could not connect to user. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+        return ''
 
 def printHelpManual():
-    print ('Hello, here you are a quick guide for the chat application:\n'
-           '-- !connect <username> : ask to the server the ip address of the specified user and then will start a chat with him\n'
-           '-- !connect : after this command the client will ask the username of the user you want to connect\n'
+    print ('\n---------------------------------------------------------------\n'
+           '-- Hello, here you are a quick guide for the chat application:\n'
+           '-- !connect <username> : ask to the server the ip address of \n'
+           '--\tthe specified user and then will start a chat with him\n'
+           '-- !connect : after this command the client will ask the \n'
+           '--\tusername of the user you want to connect\n'
            '-- !reconnect : this command manually reconnect to the chat server\n'
            '-- !disconnect : disconnect from server\n'
            '-- !close : close current chat\n'
            '-- !users : retrieve users list\n'
            '-- !get <username> : retrieve infos about the specified user\n'
            '-- !chat : send a chat request to the specified user\n'
-           '-- !quit : close the client application\n')
+           '-- !quit : close the client application\n'+
+           '---------------------------------------------------------------\n')
 
 # Read a line. Using select for non blocking reading of sys.stdin
 def getLine():
@@ -177,45 +193,36 @@ def getLine():
     return False
 
 def startUpdServer():
-    print ('Listening for users to connect...\n')
+    print ('Listening for chat requests...\n')
     udp_socket.bind(('', userPort))
-    data = ''
-    addr = ''
     while True:
         #directly accept udp requests
         try:
             data, addr = udp_socket.recvfrom(1024)
+            setTargetAddress(addr[0], addr[1])
+
         except socket.error:
             pass
+        if(getInChat() and data != ''):
+            print('\n' + addr[0] + ' : ' + data + '\n')
+            print('--: ')
 
         if(data == '!start'):
             print ('Chat request from ' + addr[0] + '\n')
             switchInChat()
-            response = raw_input('Accept chat request? (!acccept/!refuse)\n')
-            udp_socket.sendto(response, (addr[0], addr[1]))
-            if(response != '!accept'):
-                switchInChat()
         elif(data == '!close' or data == '!refuse'):
-             print('Ending chat session...\n')
-             switchInChat()
-
-        if(getInChat() and data != ''):
-             print( addr[0] + ' : ' + data + '\n')
-             reply = raw_input('You:')
-             if(reply == '!close'):
-                  switchInChat()
-
-             udp_socket.sendto(reply, (addr[0], addr[1]))
+            print('Ending chat session...\n')
+            switchInChat()
 
 
-def chatWithUser(userAddress, userPort):
+
+
+def chatWithUser(message):
 
     try:
         # directly send to udp server
-        userMessage = '!start'
-        udp_socket.sendto(userMessage, (userAddress, userPort))
-        switchInChat()
-
+        userMessage = message
+        udp_socket.sendto(userMessage, (targetAddress, targetPort))
 
     except socket.error:
         #Send failed
@@ -240,63 +247,77 @@ while 1:
                '-- !disconnect\n'
                '-- !users\n'
                '-- !get <username>\n'
-               '-- !chat\n'
                '-- !help\n'
                '-- !quit\n')
-        user_input = raw_input('...waiting for a command: \n')
+    user_input = raw_input('--:')
 
-        if user_input[:9] == "!connect ":
-            name = user_input[9:].rstrip()
-            retrieveUserIp(name)
+    if getInChat():
+        if(user_input == '!close'):
+            switchInChat()
+        chatWithUser(user_input)
 
-        elif user_input == '!connect':
-            name = raw_input('Choose an username: ')
-            retrieveUserIp(name)
+    if user_input[:9] == "!connect ":
+        name = user_input[9:].rstrip()
+        try:
+            info = retrieveUserInfo(name)
+            if info:
+                addressAndPort = info.split('|')
+                targetAddress = addressAndPort[1].rstrip()
+                targetPort = int(addressAndPort[2].rstrip())
+                print('Starting chat with ' + name + ' ' + targetAddress + ' ' + str(targetPort))
+                chatWithUser('!start')
+                switchInChat()
+            else:
+                print('Error in starting chat...\n')
+        except:
+            print ('Error in starting chat...\n')
+    elif user_input == '!connect':
+            #name = raw_input('Choose an username to start a new chat: ')
+            name = raw_input('Select user to start chat: ')
+            info = retrieveUserInfo(name)
+            if info:
+                addressAndPort = info.split('|')
+                targetAddress = addressAndPort[1].rstrip()
+                targetPort = int(addressAndPort[2].rstrip())
+                print('Starting chat with ' + name + ' ' + targetAddress + ' ' + str(targetPort))
+                chatWithUser('!start')
+                switchInChat()
+            else:
+                print('Error in starting chat...\n')
 
-        elif user_input == '!reconnect':
-            udp_socket.close()
-            sendQuitSignal(username)
-            print ('Reconnecting to server...\n')
-            registerToServer(command, username, userIpdAddress, userPort)
-            thread.start_new_thread(startUpdServer, ())
-        elif user_input == '!disconnect':
-            udp_socket.close()
-            sendQuitSignal(username)
-            print ('Client disconnected from server...\n')
-        elif user_input == '!disconnect':
-            print ('Closing current chat...\n')
-        elif user_input == '!users':
-            print ('Users retrieved!\n')
-            userList = retrieveUserList()
 
-        elif user_input[:5] == "!get ":
-            name = user_input[5:].rstrip()
-            retrieveUserInfo(name)
-        elif user_input == '!get':
-            name = raw_input('Choose an username: ')
-            retrieveUserInfo(name)
+    elif user_input == '!reconnect':
+        sendQuitSignal(username)
+        print ('Reconnecting to server...\n')
+        registerToServer(command, username, userIpdAddress, userPort)
+        thread.start_new_thread(startUpdServer, ())
+    elif user_input == '!disconnect':
+        udp_socket.close()
+        sendQuitSignal(username)
+        print ('Client disconnected from server...\n')
+    elif user_input == '!disconnect':
+        print ('Closing current chat...\n')
+    elif user_input == '!users':
+        print ('Users retrieved!\n')
+        userList = retrieveUserList()
 
-        elif user_input == '!chat':
-            try:
-                #name = raw_input('Choose an username to start a new chat: ')
-                address = raw_input('Ip Address: ')
-                port = int(raw_input('Port: '))
-                chatWithUser(address, port)
-                continue
-            except:
-                print ('Error in starting chat...\n')
+    elif user_input[:5] == "!get ":
+        name = user_input[5:].rstrip()
+        retrieveUserInfo(name)
+    elif user_input == '!get':
+        name = raw_input('Choose an username: ')
+        retrieveUserInfo(name)
 
-        elif user_input == '!help':
-            printHelpManual()
-        elif user_input == '!quit':
-            udp_socket.close()
-            sendQuitSignal(username)
-            print ('Quitting client application, come back soon!\n')
-            sys.exit()
-        elif user_input == '':
-            continue
-        else:
-            print ('Retry!\n')
+    elif user_input == '!help':
+        printHelpManual()
+    elif user_input == '!quit':
+        udp_socket.close()
+        sendQuitSignal(username)
+        print ('Quitting client application, come back soon!\n')
+        sys.exit()
+    elif user_input == '':
+        continue
+
 
 
 
