@@ -38,7 +38,7 @@ def getInChat():
     return inChat
 
 def registerToServer(command, username, userIpAddress, userPort):
-    connected = True
+
     try:
         #create an AF_INET, STREAM socket (TCP)
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -167,25 +167,44 @@ def printHelpManual():
            '-- !chat : send a chat request to the specified user\n'
            '-- !quit : close the client application\n')
 
-def startUpdServer():
-    print ('Listening for users to connect...')
-    udp_socket.bind(('', userPort))
+# Read a line. Using select for non blocking reading of sys.stdin
+def getLine():
+    i, o, e = select.select([sys.stdin], [], [], 0.0001)
+    for s in i:
+        if s == sys.stdin:
+            input = sys.stdin.readline()
+            return input
+    return False
 
+def startUpdServer():
+    print ('Listening for users to connect...\n')
+    udp_socket.bind(('', userPort))
+    data = ''
+    addr = ''
     while True:
         #directly accept udp requests
-        data, addr = udp_socket.recvfrom(1024)
+        try:
+            data, addr = udp_socket.recvfrom(1024)
+        except socket.error:
+            pass
 
-        print('>: ' + data)
         if(data == '!start'):
-            response = raw_input('Accept chat request? (!acccept/!refuse)')
+            print ('Chat request from ' + addr[0] + '\n')
+            switchInChat()
+            response = raw_input('Accept chat request? (!acccept/!refuse)\n')
             udp_socket.sendto(response, (addr[0], addr[1]))
-            if(response == '!accept'):
+            if(response != '!accept'):
                 switchInChat()
-        elif(data == '!close'):
+        elif(data == '!close' or data == '!refuse'):
+             print('Ending chat session...\n')
              switchInChat()
 
-        if(getInChat()):
-             reply = raw_input('--: ')
+        if(getInChat() and data != ''):
+             print( addr[0] + ' : ' + data + '\n')
+             reply = raw_input('You:')
+             if(reply == '!close'):
+                  switchInChat()
+
              udp_socket.sendto(reply, (addr[0], addr[1]))
 
 
@@ -209,11 +228,13 @@ print ('\nConnecting to server...\n')
 command = 'register'
 registerToServer(command, username, userIpdAddress, userPort)
 udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Make Socket Reusable
+udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1) # Allow incoming broadcasts
 thread.start_new_thread(startUpdServer, ())
 
 while 1:
     if not getInChat():
-        print ('Please, choose a command from the list:\n'
+        print ('\n\nPlease, choose a command from the list:\n'
                '-- !connect <username>\n'
                '-- !reconnect\n'
                '-- !disconnect\n'
@@ -223,6 +244,7 @@ while 1:
                '-- !help\n'
                '-- !quit\n')
         user_input = raw_input('...waiting for a command: \n')
+
         if user_input[:9] == "!connect ":
             name = user_input[9:].rstrip()
             retrieveUserIp(name)
@@ -232,9 +254,13 @@ while 1:
             retrieveUserIp(name)
 
         elif user_input == '!reconnect':
+            udp_socket.close()
+            sendQuitSignal(username)
+            print ('Reconnecting to server...\n')
             registerToServer(command, username, userIpdAddress, userPort)
-
+            thread.start_new_thread(startUpdServer, ())
         elif user_input == '!disconnect':
+            udp_socket.close()
             sendQuitSignal(username)
             print ('Client disconnected from server...\n')
         elif user_input == '!disconnect':
@@ -256,17 +282,21 @@ while 1:
                 address = raw_input('Ip Address: ')
                 port = int(raw_input('Port: '))
                 chatWithUser(address, port)
+                continue
             except:
                 print ('Error in starting chat...\n')
 
         elif user_input == '!help':
             printHelpManual()
         elif user_input == '!quit':
+            udp_socket.close()
             sendQuitSignal(username)
             print ('Quitting client application, come back soon!\n')
             sys.exit()
+        elif user_input == '':
+            continue
         else:
-            print ('This command does not appear to exit, retry please!\n')
+            print ('Retry!\n')
 
 
 
