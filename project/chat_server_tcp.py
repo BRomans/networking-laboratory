@@ -112,9 +112,14 @@ def removeUser(name):
     return ('See you soon, ' + name + '...')
 
 
-HOST = ''   # Symbolic name meaning all available interfaces
+HOST = '127.0.0.1'   # Symbolic name meaning all available interfaces
 PORT = 8888 # Arbitrary non-privileged port
-
+if len(sys.argv) == 2:
+    HOST = sys.argv[1]
+if len(sys.argv) == 3:
+    HOST = sys.argv[1]
+    PORT = int(sys.argv[2])
+print ('Init server on ' + HOST + ':' + str(PORT))
 #This does not have a chat client, its purpose is for testing the dictionary
 activeUsers = dict([('DummyUser', ['0.0.0.0', '8080'])])
 print ('Init dictionary : ', activeUsers)
